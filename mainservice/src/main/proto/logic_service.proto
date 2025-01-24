@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package com.coursework.logic;
+
+service LogicService {
+  rpc GetAllDrivers (Empty) returns (DriverDTOListResponse);
+  rpc GetActiveDrivers (Empty) returns (ActiveDriverDTOListResponse);
+  rpc GetInactiveDrivers (Empty) returns (DriverDTOListResponse);
+  rpc UpdateDriver (UpdateDriverRequest) returns (DriverResponse);
+  rpc UpdateReadyDriver (UpdateReadyDriverRequest) returns (Empty);
+  rpc DeleteDriver (DeleteDriverRequest) returns (Empty);
+  rpc getLastTrips (Empty) returns (TripDTOListResponse);
+  rpc getTrips (Empty) returns (TripDTOListResponse);
+  rpc AnalyzeDailyRevenue (Empty) returns (DailyRevenueResponse);
+  rpc GetTripRatings (Empty) returns (TripRatingsResponse);
+  rpc SaveTrip(SaveTripRequest) returns (Empty);
+  rpc GetTariffsByCompany (GetTariffsRequest) returns (TariffDTOListResponse);
+  rpc UpdateTariff (UpdateTariffRequest) returns (TariffResponse);
+}
+
+// Сообщения для DriverService
+message DriverDTO {
+  int64 id = 1;
+  string name = 2;
+  string surname = 3;
+  string phone = 4;
+  string email = 5;
+  string password = 6;
+  double rating = 7;
+  bool ready = 8;
+}
+
+message ActiveDriverDTO {
+  int64 id = 1;
+  string name = 2;
+  string surname = 3;
+  string phone = 4;
+  string email = 5;
+  double rating = 6;
+  bool ready = 7;
+}
+
+message ActiveDriverDTOListResponse {
+  repeated ActiveDriverDTO drivers = 1;
+}
+
+message DriverDTOListResponse {
+  repeated DriverDTO drivers = 1;
+}
+
+message UpdateReadyDriverRequest{
+  int64 id = 1;
+  bool ready = 2;
+}
+
+message UpdateDriverRequest {
+  int64 id = 1;
+  DriverDTO driver = 2;
+}
+
+message DriverResponse {
+  DriverDTO driver = 1;
+}
+
+message DeleteDriverRequest {
+  int64 id = 1;
+}
+message SaveTripRequest {
+  TripDTO trip = 1;
+}
+
+// Сообщения для FinancialAnalysisService
+message DailyRevenue {
+  string date = 1; // LocalDate в формате ISO
+  double revenue = 2;
+}
+
+message DailyRevenueResponse {
+  repeated DailyRevenue dailyRevenues = 1;
+}
+
+// Сообщения для RatingService
+message TripRating {
+  double driverRating = 1;
+  double clientRating = 2;
+}
+
+message TripRatingsResponse {
+  repeated TripRating tripRatings = 1;
+}
+
+// Сообщения для TariffService
+message TariffDTO {
+  int64 id = 1;
+  string name = 2;
+  double value = 3;
+  int64 companyId = 4;
+  string companyName = 5;
+}
+message TripDTOListResponse{
+  repeated TripDTO trips = 1;
+}
+message TripDTO {
+  int64 id = 1;
+  int64 clientId = 2;
+  int64 driverId = 3;
+  int64 carId = 4;
+  int64 companyId = 5;
+  int64 tariffId = 6;
+  double driverRate = 7;
+  double clientRate = 8;
+  string service = 9;
+  string price = 10; // Используем строку для BigDecimal
+  string startDate = 11; // ISO-формат
+  string endDate = 12; // ISO-формат
+}
+
+message GetTariffsRequest {
+  int64 companyId = 1;
+}
+
+message TariffDTOListResponse {
+  repeated TariffDTO tariffs = 1;
+}
+
+message UpdateTariffRequest {
+  int64 id = 1;
+  TariffDTO tariff = 2;
+}
+
+message TariffResponse {
+  TariffDTO tariff = 1;
+}
+
+// Общие сообщения
+message Empty {}

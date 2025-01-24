@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logic Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: radial-gradient(circle, #1b2735, #090a0f);
+            color: #00ffcc;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .container {
+            margin-top: 2rem;
+        }
+        .btn-custom {
+            background: #00ffcc;
+            color: #1b2735;
+            border: none;
+            transition: transform 0.3s ease-in-out;
+        }
+        .btn-custom:hover {
+            transform: scale(1.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        table thead {
+            background: rgba(255, 0, 204, 0.9);
+        }
+        table thead th {
+            color: #1b2735;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 2px solid #00ffcc;
+        }
+        table tbody tr {
+            transition: background-color 0.3s ease;
+        }
+        table tbody tr:hover {
+            background-color: rgba(0, 255, 204, 0.2);
+        }
+        table tbody td {
+            padding: 10px;
+            color: #00ffcc;
+            border-bottom: 1px solid #ff00cc;
+        }
+        canvas {
+            margin-top: 20px;
+            border: 2px solid #ff00cc;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="text-center">Logic Management Dashboard</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <button class="btn btn-custom w-100" onclick="fetchAllDrivers()">Get All Drivers</button>
+        </div>
+        <div class="col-md-6">
+            <button class="btn btn-custom w-100" onclick="fetchActiveDrivers()">Get Active Drivers</button>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <button class="btn btn-custom w-100" onclick="fetchInactiveDrivers()">Get Inactive Drivers</button>
+        </div>
+        <div class="col-md-6">
+            <button class="btn btn-custom w-100" onclick="fetchTripRatings()">Get Trip Ratings</button>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <button class="btn btn-custom w-100" onclick="fetchTariffs()">Get Tariffs by Company</button>
+        </div>
+        <div class="col-md-6">
+            <button class="btn btn-custom w-100" onclick="fetchRevenue()">Analyze Revenue</button>
+        </div>
+    </div>
+    <div class="mt-5">
+        <h3>Results</h3>
+        <div id="results"></div>
+        <canvas id="revenueChart" style="display: none; max-width: 600px;"></canvas>
+    </div>
+</div>
+
+<script>
+    const apiUrl = '/api/logic';
+
+    const displayTable = (headers, rows) => {
+        const table = `
+            <table>
+                <thead>
+                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                    ${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+                </tbody>
+            </table>
+        `;
+        document.getElementById('results').innerHTML = table;
+    };
+
+    const displayChart = (labels, data) => {
+        const chartCanvas = document.getElementById('revenueChart');
+        chartCanvas.style.display = 'block';
+        const ctx = chartCanvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Daily Revenue',
+                    data: data,
+                    backgroundColor: 'rgba(255, 0, 204, 0.6)',
+                    borderColor: '#00ffcc',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#00ffcc'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#00ffcc' }
+                    },
+                    y: {
+                        ticks: { color: '#00ffcc' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    };
+
+    const fetchAllDrivers = async () => {
+        try {
+            const response = await axios.get(`${apiUrl}/drivers/all`);
+            const headers = ['ID', 'Name', 'Surname', 'Phone', 'Email', 'Rating'];
+            const rows = response.data.map(driver => [
+                driver.id, driver.name, driver.surname, driver.phone, driver.email, driver.rating
+            ]);
+            displayTable(headers, rows);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchActiveDrivers = async () => {
+        try {
+            const response = await axios.get(`${apiUrl}/drivers/active`);
+            const headers = ['ID', 'Name', 'Surname', 'Phone', 'Email', 'Rating', 'Ready'];
+            const rows = response.data.map(driver => [
+                driver.id, driver.name, driver.surname, driver.phone, driver.email, driver.rating, driver.ready
+            ]);
+            displayTable(headers, rows);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchInactiveDrivers = async () => {
+        try {
+            const response = await axios.get(`${apiUrl}/drivers/inactive`);
+            const headers = ['ID', 'Name', 'Surname', 'Phone', 'Email', 'Rating'];
+            const rows = response.data.map(driver => [
+                driver.id, driver.name, driver.surname, driver.phone, driver.email, driver.rating
+            ]);
+            displayTable(headers, rows);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchTripRatings = async () => {
+        try {
+            const response = await axios.get(`${apiUrl}/ratings/trips`);
+            const headers = ['Driver Rating', 'Client Rating'];
+            const rows = response.data.map(rating => [
+                rating.driverRating, rating.clientRating
+            ]);
+            displayTable(headers, rows);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchTariffs = async () => {
+        const companyId = prompt("Enter Company ID:");
+        if (!companyId) return;
+        try {
+            const response = await axios.get(`${apiUrl}/tariffs/company/${companyId}`);
+            const headers = ['ID', 'Name', 'Value', 'Company ID', 'Company Name'];
+            const rows = response.data.map(tariff => [
+                tariff.id, tariff.name, tariff.value, tariff.companyId, tariff.companyName
+            ]);
+            displayTable(headers, rows);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchRevenue = async () => {
+        try {
+            const response = await axios.get(`${apiUrl}/financial/revenue`);
+            const labels = response.data.map(revenue => revenue.first);
+            const data = response.data.map(revenue => revenue.second);
+            displayChart(labels, data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+</script>
+</body>
+</html>

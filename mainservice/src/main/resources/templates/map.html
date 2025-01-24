@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi Map with Drivers and Trips</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: radial-gradient(circle, #1b2735, #090a0f);
+            color: #ff00cc;
+        }
+        .container {
+            display: flex;
+        }
+        #mapCanvas {
+            flex: 3;
+            display: block;
+        }
+        .table-container {
+            flex: 4;
+            padding: 10px;
+            overflow-y: auto;
+            background: #1b2735;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #ff00cc;
+            border: 2px solid #ff00cc;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 5px;
+            border: 2px solid #ff00cc;
+        }
+        th {
+            background-color: #090a0f;
+        }
+        td {
+            text-align: center;
+        }
+        button {
+            padding: 5px 8px;
+            border: 2px solid #ff00cc;
+            background: none;
+            color: #ff00cc;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        button:hover {
+            background: #ff00cc;
+            color: #1b2735;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <canvas id="mapCanvas"></canvas>
+
+    <div class="table-container">
+        <table id="driversTable">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Surname</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Rating</th>
+                <th>Ready</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+        <table id="tripsTable">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Client ID</th>
+                <th>Driver ID</th>
+                <th>Car ID</th>
+                <th>Company ID</th>
+                <th>Tariff ID</th>
+                <th>Driver Rate</th>
+                <th>Client Rate</th>
+                <th>Service</th>
+                <th>Price</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 700;
+    canvas.height = 700;
+
+    const streetColor = "#00ffcc";
+    const carColor = "#ff00cc";
+
+    const rows = 5;
+    const cols = 5;
+    const spacing = 100;
+
+    const points = [];
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            points.push({ x: col * spacing + spacing / 2, y: row * spacing + spacing / 2 });
+        }
+    }
+
+    const adjacencyMatrix = Array(points.length).fill(null).map(() => []);
+    points.forEach((_, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+
+        if (col > 0) adjacencyMatrix[index].push(index - 1);
+        if (col < cols - 1) adjacencyMatrix[index].push(index + 1);
+        if (row > 0) adjacencyMatrix[index].push(index - cols);
+        if (row < rows - 1) adjacencyMatrix[index].push(index + cols);
+    });
+
+    const cars = [];
+    const circles = [];
+
+    function initializeCars(drivers) {
+        cars.length = 0;
+        drivers.filter(driver => driver.ready).forEach(driver => {
+            const startPointIndex = Math.floor(Math.random() * points.length);
+            cars.push({
+                id: driver.id,
+                currentPoint: startPointIndex,
+                x: points[startPointIndex].x,
+                y: points[startPointIndex].y,
+                targetPoint: null,
+                speed: 3,
+                color: carColor,
+            });
+        });
+
+        initializeCircles(cars);
+    }
+
+    function initializeCircles(cars) {
+        circles.length = 0;
+        cars.forEach(car => {
+            const startPointIndex = Math.floor(Math.random() * points.length);
+            circles.push({
+                x: points[startPointIndex].x,
+                y: points[startPointIndex].y,
+                color: car.color,
+            });
+        });
+    }
+
+    function drawGrid() {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = streetColor;
+
+        adjacencyMatrix.forEach((connections, index) => {
+            const point = points[index];
+            connections.forEach(connection => {
+                const connectedPoint = points[connection];
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+                ctx.lineTo(connectedPoint.x, connectedPoint.y);
+                ctx.stroke();
+            });
+        });
+    }
+
+    function drawCars() {
+        cars.forEach(car => {
+            const size = 10;
+            ctx.fillStyle = car.color;
+
+            ctx.beginPath();
+            ctx.moveTo(car.x, car.y);
+            ctx.lineTo(car.x - size, car.y + size);
+            ctx.lineTo(car.x + size, car.y + size);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = streetColor;
+            ctx.font = "12px Arial";
+            ctx.fillText(car.id, car.x - 5, car.y - 10);
+        });
+    }
+
+    function drawCircles() {
+        circles.forEach(circle => {
+            ctx.beginPath();
+            ctx.arc(circle.x, circle.y, 8, 0, 2 * Math.PI);
+            ctx.fillStyle = circle.color;
+            ctx.fill();
+        });
+    }
+
+    function moveCars() {
+        cars.forEach(car => {
+            if (car.targetPoint === null) {
+                const connections = adjacencyMatrix[car.currentPoint];
+                const nextPointIndex = connections[Math.floor(Math.random() * connections.length)];
+                car.targetPoint = points[nextPointIndex];
+                car.currentPoint = nextPointIndex;
+            }
+
+            const dx = car.targetPoint.x - car.x;
+            const dy = car.targetPoint.y - car.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < car.speed) {
+                car.x = car.targetPoint.x;
+                car.y = car.targetPoint.y;
+                car.targetPoint = null;
+
+                checkCollision(car);
+            } else {
+                car.x += (dx / distance) * car.speed;
+                car.y += (dy / distance) * car.speed;
+            }
+        });
+    }
+
+    async function checkCollision(car) {
+        const collisionIndex = circles.findIndex(circle => {
+            const dx = circle.x - car.x;
+            const dy = circle.y - car.y;
+            return Math.sqrt(dx * dx + dy * dy) < 8;
+        });
+
+        if (collisionIndex !== -1) {
+            circles.splice(collisionIndex, 1);
+            await sendTripRequest(car.id);
+            circles.push({
+                x: points[Math.floor(Math.random() * points.length)].x,
+                y: points[Math.floor(Math.random() * points.length)].y,
+                color: car.color,
+            });
+        }
+    }
+
+    async function sendTripRequest(driverId) {
+        const tripDTO = {
+            id: 0,
+            clientId: Math.floor(Math.random() * 3) + 1,
+            driverId,
+            carId: Math.floor(Math.random() * 3) + 1,
+            companyId: Math.floor(Math.random() * 3) + 1,
+            tariffId: Math.floor(Math.random() * 3) + 1,
+            driverRate: null,
+            clientRate: null,
+            service: "Random Service",
+            price: (Math.random() * 100).toFixed(2),
+            startDate: new Date().toISOString(),
+            endDate: new Date(new Date().getTime() + 30 * 60 * 1000).toISOString(),
+        };
+
+        try {
+            const response = await fetch('/api/logic/add-trip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tripDTO),
+            });
+
+            if (response.ok) {
+                loadTrips();
+            }
+        } catch (error) {
+            console.error('Error adding trip:', error);
+        }
+    }
+
+    async function toggleReady(driverId, currentReady) {
+        try {
+            const response = await fetch(`/api/logic/drivers/update-ready/${driverId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(!currentReady),
+            });
+
+            if (response.ok) {
+                loadDrivers();
+            }
+        } catch (error) {
+            console.error('Error updating ready status:', error);
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        drawCars();
+        drawCircles();
+        moveCars();
+        requestAnimationFrame(animate);
+    }
+
+    async function loadDrivers() {
+        try {
+            const response = await fetch('/api/logic/drivers/all');
+            if (!response.ok) throw new Error(`Failed to fetch drivers: ${response.status}`);
+            const drivers = await response.json();
+            renderDriversTable(drivers);
+            initializeCars(drivers);
+        } catch (error) {
+            console.error('Error loading drivers:', error);
+        }
+    }
+
+    async function loadTrips() {
+        try {
+            const response = await fetch('/api/logic/last-trips');
+            if (!response.ok) throw new Error(`Failed to fetch trips: ${response.status}`);
+            const trips = await response.json();
+            renderTripsTable(trips);
+        } catch (error) {
+            console.error('Error loading trips:', error);
+        }
+    }
+
+    function renderDriversTable(drivers) {
+        const tbody = document.getElementById('driversTable').querySelector('tbody');
+        tbody.innerHTML = '';
+
+        drivers.forEach(driver => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${driver.id}</td>
+                <td>${driver.name}</td>
+                <td>${driver.surname}</td>
+                <td>${driver.phone}</td>
+                <td>${driver.email}</td>
+                <td>${driver.rating.toFixed(1)}</td>
+                <td>
+                    <button onclick="toggleReady(${driver.id}, ${driver.ready})">
+                        ${driver.ready}
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderTripsTable(trips) {
+        const tbody = document.getElementById('tripsTable').querySelector('tbody');
+        tbody.innerHTML = '';
+
+        trips.forEach(trip => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${trip.id}</td>
+                <td>${trip.clientId}</td>
+                <td>${trip.driverId}</td>
+                <td>${trip.carId}</td>
+                <td>${trip.companyId}</td>
+                <td>${trip.tariffId}</td>
+                <td>${trip.driverRate || ''}</td>
+                <td>${trip.clientRate || ''}</td>
+                <td>${trip.service}</td>
+                <td>${trip.price}</td>
+                <td>${trip.startDate}</td>
+                <td>${trip.endDate}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    animate();
+    loadDrivers();
+    loadTrips();
+</script>
+</body>
+</html>
